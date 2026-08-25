@@ -1,36 +1,100 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# PowrBridge PM
 
-## Getting Started
+High-performance B2B project management (Linear / ClickUp-class) built with Next.js 16, Prisma, Auth.js, and PostgreSQL.
 
-First, run the development server:
+## Step 1 — Foundation (complete)
+
+- Project structure & `.env.example`
+- Full Prisma domain schema (multi-tenant + billing + collaboration)
+- Auth.js (NextAuth v5) with Credentials + optional Google/GitHub
+- RBAC permission matrix, guards, and route middleware
+
+## Step 3 — Collaboration, calendar, analytics, billing (complete)
+
+- Activity log on project/task mutations
+- Notification center (read/unread) + live refresh
+- SSE realtime bridge (`/api/realtime`) for live board updates
+- Command palette (`⌘K`)
+- Calendar view for due-dated tasks
+- Analytics dashboard (velocity, completion, workload)
+- Stripe webhook handler (`invoice.paid`, subscription updated/deleted)
+- Billing page with seeded plan tiers
+
+## Quick start
 
 ```bash
+cp .env.example .env.local
+# Set AUTH_SECRET (openssl rand -base64 32)
+
+# Start Postgres + Redis (requires Docker)
+docker compose up -d
+
+npm install
+npm run db:generate
+npm run db:migrate
+npm run db:seed
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+**Demo account** (after seed):
+- Email: `demo@powrbridge.app`
+- Password: `Demo1234!`
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
-## Learn More
+## Architecture (Step 1)
 
-To learn more about Next.js, take a look at the following resources:
+```
+src/
+  app/
+    api/auth/[...nextauth]/   # Auth.js handlers
+    api/organizations/[id]/  # Example RBAC-protected route
+  lib/
+    auth/                     # Auth config, session helpers, registration
+    rbac/                     # Permissions, guards, API wrappers
+    db/prisma.ts              # Prisma singleton
+    validations/              # Zod schemas
+  middleware.ts               # Edge auth gate
+prisma/
+  schema.prisma               # Domain model
+  seed.ts                     # Free / Pro / Enterprise plans
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### Tenancy & RBAC
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```
+Organization → Team → Project → Task
+Org roles: Owner · Admin · Member · Viewer
+```
 
-## Deploy on Vercel
+Use `requireOrgPermission` / `requireProjectPermission` in server code, or wrap Route Handlers with `withOrgPermission` / `withProjectPermission`.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+### Auth
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- JWT sessions (Credentials-compatible)
+- Active organization id + role on the session token
+- Edge middleware protects `/app` and `/api` (except auth + webhooks)
+
+## Scripts
+
+| Script | Purpose |
+|--------|---------|
+| `npm run dev` | Next.js (Turbopack) |
+| `npm run db:generate` | Generate Prisma Client |
+| `npm run db:migrate` | Create / apply migrations |
+| `npm run db:seed` | Seed subscription plans |
+| `npm run db:studio` | Prisma Studio |
+
+## Improvements
+
+- Task detail drawer (status, priority, due date, description, comments, delete)
+- File attachments on tasks (local storage; S3-ready schema)
+- Org members + invite links (`/app/settings/members`, `/invite/:token`)
+- Project activity feed
+- Dark / light theme toggle
+- ⌘K quick project create + project search
+- Stripe Checkout + Customer Portal actions
+- Admin billing permission
+- Richer Kanban add form (priority + due date) with overdue styling
+# PowrBridge-Project-Management
